@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.2.0] - 2025/11/06 18:52:10
+
+### Added
+
+- Added support for passing an allowed-domains.txt file for exposing ip addresses that the container can use.
+
+
 ## [0.1.0] - 2025/11/05 15:47:25
 
 ### Added
