@@ -42,6 +42,7 @@
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "OPENCODE_CONFIG": "/home/node/.opencode/opencode.json",
     "OPENCODE_CONFIG_DIR": "/home/node/.opencode",
+    "ALLOWED_DOMAINS": "/workspace/.devcontainer/allowed-domains.txt",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",

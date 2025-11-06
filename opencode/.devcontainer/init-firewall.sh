@@ -60,10 +60,31 @@ while read -r cidr; do
         exit 1
     fi
     echo "Adding GitHub range $cidr"
-    ipset add allowed-domains "$cidr"
+    ipset add allowed-domains "$cidr" -exist
 done < <(echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | aggregate -q)
 
-# Resolve and add other allowed domains
+# Function to resolve and add a domain to the allowed list
+add_domain() {
+    local domain="$1"
+    echo "Resolving $domain..."
+    ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
+    if [ -z "$ips" ]; then
+        echo "ERROR: Failed to resolve $domain"
+        exit 1
+    fi
+
+    while read -r ip; do
+        if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            echo "ERROR: Invalid IP from DNS for $domain: $ip"
+            exit 1
+        fi
+        echo "Adding $ip for $domain"
+        ipset add allowed-domains "$ip" -exist
+    done < <(echo "$ips")
+}
+
+# Add default hardcoded domains
+echo "Adding default allowed domains..."
 for domain in \
     "registry.npmjs.org" \
     "api.anthropic.com" \
@@ -73,22 +94,28 @@ for domain in \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
     "update.code.visualstudio.com"; do
-    echo "Resolving $domain..."
-    ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
-    if [ -z "$ips" ]; then
-        echo "ERROR: Failed to resolve $domain"
-        exit 1
-    fi
-    
-    while read -r ip; do
-        if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-            echo "ERROR: Invalid IP from DNS for $domain: $ip"
-            exit 1
-        fi
-        echo "Adding $ip for $domain"
-        ipset add allowed-domains "$ip"
-    done < <(echo "$ips")
+    add_domain "$domain"
 done
+
+# Read additional domains from custom allowed domains file
+# Can be overridden with ALLOWED_DOMAINS environment variable
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+# Default path if ALLOWED_DOMAINS is not set
+ALLOWED_DOMAINS_FILE="${ALLOWED_DOMAINS:-/workspace/.devcontainer/allowed-domains.txt}"
+
+if [ -f "$ALLOWED_DOMAINS_FILE" ]; then
+    echo "Reading additional domains from $ALLOWED_DOMAINS_FILE..."
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip empty lines and comments
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+        # Trim whitespace
+        domain=$(echo "$line" | xargs)
+        add_domain "$domain"
+    done < "$ALLOWED_DOMAINS_FILE"
+else
+    echo "No additional allowed domains found at $ALLOWED_DOMAINS_FILE, skipping..."
+fi
 
 # Get host IP from default route
 HOST_IP=$(ip route | grep default | cut -d" " -f3)
