@@ -276,6 +276,53 @@ Add or override environment variables:
 
 ### Customizing Firewall Rules
 
+#### Adding Custom Domains to the Whitelist
+
+The firewall script allows you to add custom domains through the `allowed-domains.txt` file.
+
+**Step 1:** Create or copy the example file
+
+```bash
+# In your project's .devcontainer directory
+cp allowed-domains.txt.example allowed-domains.txt
+```
+
+**Step 2:** Add your domains (one per line)
+
+```txt
+# .devcontainer/allowed-domains.txt
+myapi.example.com
+cdn.example.com
+database.mycompany.com
+```
+
+**Step 3:** Rebuild your container
+
+The firewall script automatically reads from `/workspace/.devcontainer/allowed-domains.txt` at startup.
+
+#### Default Allowed Domains
+
+The base container includes these hardcoded domains:
+- `registry.npmjs.org` - npm package registry
+- `api.anthropic.com` - Anthropic API for OpenCode
+- `sentry.io`, `statsig.anthropic.com`, `statsig.com` - Error reporting and analytics
+- `marketplace.visualstudio.com`, `vscode.blob.core.windows.net`, `update.code.visualstudio.com` - VS Code services
+- GitHub IP ranges (fetched dynamically)
+
+#### Advanced: Custom File Location
+
+Override the default path using the `ALLOWED_DOMAINS` environment variable:
+
+```json
+{
+  "containerEnv": {
+    "ALLOWED_DOMAINS": "/custom/path/to/domains.txt"
+  }
+}
+```
+
+#### Advanced: Custom Firewall Script
+
 The firewall script is located at `/usr/local/bin/init-firewall.sh`. To modify it:
 
 **Option 1: Override in custom Dockerfile**
