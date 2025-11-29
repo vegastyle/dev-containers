@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.2.3] - 2025/11/29 21:42:01
+
+### Changed
+
+- init-firewall.sh to handle windows line endings so it doesn't break the ip address lookup portion of the code.
+
+
 ## [0.2.2] - 2025/11/29 18:25:03
 
 ### Added
