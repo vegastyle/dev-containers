@@ -1,0 +1,23 @@
+# Additional allowed domains for firewall whitelist
+#
+# The init-firewall.sh script automatically reads domains from:
+#   /workspace/.devcontainer/allowed-domains.txt
+#
+# To use this file:
+#   1. Copy or rename this file to 'allowed-domains.txt'
+#   2. Add your custom domains below (one per line)
+#   3. Comments (lines starting with #) and empty lines are ignored
+#
+# The base container already allows these domains (hardcoded):
+#   - registry.npmjs.org (npm packages)
+#   - api.anthropic.com (OpenCode AI)
+#   - sentry.io, statsig.anthropic.com, statsig.com (analytics)
+#   - marketplace.visualstudio.com (VS Code extensions)
+#   - vscode.blob.core.windows.net (VS Code updates)
+#   - update.code.visualstudio.com (VS Code updates)
+#
+# Example custom domains:
+# myapi.example.com
+# cdn.example.com
+# database.mycompany.com
+# storage.googleapis.com
