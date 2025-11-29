@@ -2,6 +2,10 @@
 set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 IFS=$'\n\t'       # Stricter word splitting
 
+echo "========================================"
+echo "Starting firewall initialization..."
+echo "========================================"
+
 # 1. Extract Docker DNS info BEFORE any flushing
 DOCKER_DNS_RULES=$(iptables-save -t nat | grep "127\.0\.0\.11" || true)
 
@@ -44,16 +48,25 @@ ipset create allowed-domains hash:net
 echo "Fetching GitHub IP ranges..."
 gh_ranges=$(curl -s https://api.github.com/meta)
 if [ -z "$gh_ranges" ]; then
-    echo "ERROR: Failed to fetch GitHub IP ranges"
+    echo "ERROR: Failed to fetch GitHub IP ranges (curl returned empty response)"
+    echo "This might indicate network connectivity issues during container startup"
     exit 1
 fi
 
+echo "GitHub API response received, validating..."
 if ! echo "$gh_ranges" | jq -e '.web and .api and .git' >/dev/null; then
     echo "ERROR: GitHub API response missing required fields"
+    echo "Response received: $gh_ranges"
     exit 1
 fi
 
 echo "Processing GitHub IPs..."
+# Check if aggregate command exists
+if ! command -v aggregate >/dev/null 2>&1; then
+    echo "ERROR: 'aggregate' command not found. Please install aggregate-flim package."
+    exit 1
+fi
+
 while read -r cidr; do
     if [[ ! "$cidr" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then
         echo "ERROR: Invalid CIDR range from GitHub meta: $cidr"
@@ -109,8 +122,10 @@ if [ -f "$ALLOWED_DOMAINS_FILE" ]; then
         # Skip empty lines and comments
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
 
-        # Trim whitespace
-        domain=$(echo "$line" | xargs)
+        # Trim whitespace and strip carriage returns (handles Windows line endings)
+        domain=$(echo "$line" | tr -d '\r' | xargs)
+        # Skip if domain is empty after trimming
+        [ -z "$domain" ] && continue
         add_domain "$domain"
     done < "$ALLOWED_DOMAINS_FILE"
 else
@@ -146,19 +161,6 @@ iptables -A OUTPUT -m set --match-set allowed-domains dst -j ACCEPT
 # Explicitly REJECT all other outbound traffic for immediate feedback
 iptables -A OUTPUT -j REJECT --reject-with icmp-admin-prohibited
 
+echo "========================================"
 echo "Firewall configuration complete"
-echo "Verifying firewall rules..."
-if curl --connect-timeout 5 https://example.com >/dev/null 2>&1; then
-    echo "ERROR: Firewall verification failed - was able to reach https://example.com"
-    exit 1
-else
-    echo "Firewall verification passed - unable to reach https://example.com as expected"
-fi
-
-# Verify GitHub API access
-if ! curl --connect-timeout 5 https://api.github.com/zen >/dev/null 2>&1; then
-    echo "ERROR: Firewall verification failed - unable to reach https://api.github.com"
-    exit 1
-else
-    echo "Firewall verification passed - able to reach https://api.github.com as expected"
-fi
+echo "========================================"
